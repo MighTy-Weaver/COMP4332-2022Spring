@@ -90,7 +90,7 @@ x_valid_processed = pd.DataFrame(
 train_dataset = Dataset.from_pandas(x_train_processed)
 valid_dataset = Dataset.from_pandas(x_valid_processed)
 
-device = torch.device('cuda:1') if torch.cuda.is_available() else torch.device('cpu')
+device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
 
 tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased")
 model = CustomModel().to(device)
@@ -173,7 +173,7 @@ for epoch in range(num_epochs):
         max_val_f1 = macro_f1
         max_f1_acc = np.mean(y_valid_labels == y_pred_labels)
         max_metrics = classification_report(y_valid_labels, y_pred_labels)
-        torch.save(model, './BART_val_best.pkl')
+        torch.save(model, './BERT_distilled_val_best.pkl')
     print('\n\n\n---------------------------------\n'
           'MAX F1 {}\tMAX ACC {}\n{}'
           '---------------------------------------\n\n'.format(max_val_f1, max_f1_acc, max_metrics))

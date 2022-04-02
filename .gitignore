@@ -128,3 +128,4 @@ dmypy.json
 # Pyre type checker
 .pyre/
 /Project 1/try.py
+/Project 1/glove/

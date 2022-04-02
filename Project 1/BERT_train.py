@@ -143,7 +143,7 @@ for epoch in range(num_epochs):
         max_val_f1 = macro_f1
         max_f1_acc = np.mean(y_valid_labels == y_pred_labels)
         max_metrics = classification_report(y_valid_labels, y_pred_labels)
-        torch.save(model, './BART_val_best.pkl')
+        torch.save(model, './BERT_val_best.pkl')
     print('\n\n\n---------------------------------\n'
           'MAX F1 {}\tMAX ACC {}\n{}'
           '---------------------------------------\n\n'.format(max_val_f1, max_f1_acc, max_metrics))
