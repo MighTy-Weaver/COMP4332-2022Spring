@@ -5,12 +5,15 @@ import zipfile
 import numpy as np
 import pandas as pd
 import requests
+import spacy
 import torch
 from sklearn.metrics import classification_report
 from torch import nn
 from torch.nn import BatchNorm1d
 from torch.nn import CrossEntropyLoss
+from torch.nn import Dropout
 from torch.nn import LSTM
+from torch.nn import Linear
 from torch.optim import AdamW
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
@@ -43,7 +46,7 @@ class TextDataset(Dataset):
 
     def __getitem__(self, index):
         if self.mode in ['train', 'valid']:
-            return self.data.loc[index, 'text'], self.data.loc[index, 'stars']
+            return self.data.loc[index, 'text'], self.data.loc[index, 'stars']-1
         else:
             return self.data.loc[index, 'text']
 
@@ -60,27 +63,30 @@ class BiLSTM_model(nn.Module):
 
         self.LSTM = LSTM(input_size=glove_dim, hidden_size=256, num_layers=2, bias=True, batch_first=True, dropout=0.2,
                          bidirectional=True)
-        self.bn1 = BatchNorm1d(self.get_output_length())
+        self.bn = BatchNorm1d(self.get_output_length())
+        self.nn = Linear(in_features=self.get_output_length(), out_features=5)
+        self.dropout = Dropout(p=0.2)
 
     def encode(self, text):
         doc = list(self.nlp(text))
         if len(doc) > self.sentence_length:
             doc = doc[:self.sentence_length]
         else:
-            doc.extend(['-PAD-'] * self.sentence_length - len(list(doc)))
+            doc.extend(['-PAD-'] * (self.sentence_length - len(list(doc))))
         return torch.tensor([self.encode_dict[i] for i in doc])
 
     def forward(self, x):
-        encoding = self.encode(x)
-        out, (h0, c0) = self.LSTM(encoding)
+        # print(x.shape)
+        out, (h0, c0) = self.LSTM(x)
+        # print(out.shape, h0.shape, c0.shape)
         seq_avg = torch.mean(out, dim=1).squeeze()  # (bs, 2 * hidden size)
         h0_avg = torch.mean(h0, dim=0).squeeze()  # (bs, hidden size)
         c0_avg = torch.mean(c0, dim=0).squeeze()  # (bs, hidden size)
         # print(seq_avg.shape, h0_avg.shape, c0_avg.shape)  # ,torch.cat((seq_avg, h0_avg, c0_avg), dim=1).shape)
         try:
-            return self.bn(torch.cat((seq_avg, h0_avg, c0_avg), dim=1))
+            return self.dropout(self.nn(self.bn(torch.cat((seq_avg, h0_avg, c0_avg), dim=1))))
         except IndexError:
-            return self.bn(torch.cat((seq_avg, h0_avg, c0_avg), dim=-1).unsqueeze(0))
+            return self.dropout(self.nn(self.bn(torch.cat((seq_avg, h0_avg, c0_avg), dim=-1).unsqueeze(0))))
 
     def get_output_length(self):
         return 4 * self.hidden_size if self.bidirectional else 3 * self.hidden_size
@@ -90,7 +96,7 @@ class BiLSTM_model(nn.Module):
 parser = argparse.ArgumentParser()
 parser.add_argument("--gpu", type=int, default=0, required=False, help="The number of gpu you want to use")
 parser.add_argument("--epoch", type=int, default=100, required=False)
-parser.add_argument("--bs", type=int, default=32, required=False)
+parser.add_argument("--bs", type=int, default=8, required=False)
 parser.add_argument("--lr", type=float, default=1e-5, required=False)
 parser.add_argument("--glove_size", type=int, choices=[6, 42, 840], default=840, required=False,
                     help="the number of how many billion words does the glove model pretrained on")
@@ -138,13 +144,14 @@ glove_path = glove_path_dict[args.glove_size]
 glove_dimension = glove_dimension_dict[args.glove_size]
 
 # Read the glove embedding from the txt and save it into a dict
-glove_dict = {}
-with open(glove_path, 'r', encoding="utf-8") as f:
-    for line in tqdm(f, desc="loading GLOVE"):
-        values = line.split(' ')
-        word = values[0]
-        vector = np.asarray(values[1:], "float32")
-        glove_dict[word] = vector
+if not os.path.exists("./glove/encoded_dict_{}B_{}d.npy".format(args.glove_size, glove_dimension)):
+    glove_dict = {}
+    with open(glove_path, 'r', encoding="utf-8") as f:
+        for line in tqdm(f, desc="loading GLOVE"):
+            values = line.split(' ')
+            word = values[0]
+            vector = np.asarray(values[1:], "float32").reshape((1, -1))
+            glove_dict[word] = vector
 
 train_dataset = TextDataset('train')
 valid_dataset = TextDataset('valid')
@@ -153,44 +160,40 @@ test_dataset = TextDataset('test')
 # Give all the words appeared in our corpus their glove embedding, for those who are not exist, random initialize them
 encoded_dict = {}
 count, total = 0, 0
-max_length = 0
+max_length = 1209
 nlp = spacy.load('en_core_web_trf')
-glove_keys = glove_dict.keys()
-for i in [train_dataset, valid_dataset, test_dataset]:
-    for j in trange(len(i)):
-        text = i[j]
-        if len(list(nlp(text))) > max_length:
-            max_length = len(list(nlp(text)))
-        for token in nlp(text):
-            if token not in glove_keys:
-                encoded_dict[word] = np.random.rand(1, glove_dimension)[0]
-                count += 1
-                total += 1
-            else:
-                encoded_dict[word] = glove_dict[word]
-                total += 1
-encoded_dict['-PAD-'] = np.zeros(shape=(1, glove_dimension), dtype=float)
+
+if os.path.exists("./glove/encoded_dict_{}B_{}d.npy".format(args.glove_size, glove_dimension)):
+    encoded_dict = np.load("./glove/encoded_dict_{}B_{}d.npy".format(args.glove_size, glove_dimension),
+                           allow_pickle=True).item()
+else:
+    glove_keys = glove_dict.keys()
+    for i in [train_dataset, valid_dataset, test_dataset]:
+        for j in trange(len(i)):
+            text = i[j][0]
+            if len(nlp(text)) > max_length:
+                max_length = len(nlp(text))
+            for token in nlp(text):
+                if str(token) not in encoded_dict.keys():
+                    if str(token) not in glove_keys:
+                        encoded_dict[str(token)] = np.random.rand(1, glove_dimension)[0]
+                        count += 1
+                        total += 1
+                    else:
+                        encoded_dict[str(token)] = glove_dict[str(token)]
+                        total += 1
+    encoded_dict['-PAD-'] = np.zeros(shape=(1, glove_dimension), dtype=float)
+    np.save("./glove/encoded_dict_{}B_{}d.npy".format(args.glove_size, glove_dimension), encoded_dict)
 
 # Test how many words are found in glove and how many are randomly initialized
 print("words not found {}".format(count))
 print("words total {}".format(total))
 print(len(encoded_dict))
-np.save("./glove/encoded_dict_{}B_{}d.npy".format(args.glove_size, glove_dimension), encoded_dict)
-
-# Build a dict that records the word to a single unique integer, and our encoded matrix for word embedding
-encoded_word2id = {}
-encoded_matrix = np.zeros((len(encoded_dict.keys()), glove_dimension), dtype=float)
-for i, word in enumerate(encoded_dict.keys()):
-    encoded_word2id[word] = i
-    encoded_matrix[i] = encoded_dict[word]
-print(encoded_matrix.shape)
-np.save("./glove/encoded_matrix_{}B_{}d.npy".format(args.glove_size, glove_dimension), encoded_matrix)
 
 # Load some parameters for deep learning
 embedding_dim = glove_dimension
-num_words = len(encoded_dict)
 input_length = max_length
-print(embedding_dim, num_words, input_length)
+print(embedding_dim, input_length)
 
 # Set the GPU device
 if torch.cuda.is_available():
@@ -203,7 +206,19 @@ print(torch.cuda.get_device_name())
 print('Device number:', torch.cuda.device_count())
 print(torch.cuda.get_device_properties(device))
 
-model = BiLSTM_model(nlp, encoded_dict, embedding_dim, input_length).to(device)
+
+def encode(text):
+    doc = list(nlp(text))
+    if len(doc) > max_length:
+        doc = doc[:max_length]
+    else:
+        doc.extend(['-PAD-'] * (max_length - len(list(doc))))
+    return torch.tensor([encoded_dict[str(i)].reshape(1, glove_dimension) for i in doc], dtype=torch.float)
+
+
+model = BiLSTM_model(spacy=nlp, encode_dict=encoded_dict, glove_dim=embedding_dim, sentence_length=input_length).to(
+    device)
+
 train_loader = DataLoader(train_dataset, batch_size=BS, shuffle=True)
 valid_loader = DataLoader(valid_dataset, batch_size=BS, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=BS, shuffle=True)
@@ -226,10 +241,13 @@ for e in trange(epochs, desc="Epoch: "):
     model.train()
     total_acc, total_loss, total_count = 0, 0, 0
     for inputs, labels in tqdm(train_loader):
-        inputs = inputs.to(device)
-        labels = labels.type(torch.float32).to(device)
+        inputs = torch.stack([encode(t) for t in inputs], dim=0).squeeze().to(device)
+        labels = labels.type(torch.long).to(device)
         outputs = model(inputs)
-        loss = criterion(outputs, labels.reshape(-1, 1))
+        # print(outputs.shape,labels.shape)
+        # print(outputs)
+        # print(labels)
+        loss = criterion(outputs, labels)
 
         optimizer.zero_grad()
         loss.backward()
@@ -248,10 +266,11 @@ for e in trange(epochs, desc="Epoch: "):
 
     model.eval()
     y_valid_labels, y_pred_labels = [], []
-    for inputs, labels in tqdm(train_loader):
-        inputs = inputs.to(device)
-        labels = labels.type(torch.float32).to(device)
+    for inputs, labels in tqdm(valid_loader):
+        inputs = torch.stack([encode(t) for t in inputs], dim=0).squeeze().to(device)
+        labels = labels.type(torch.long).to(device)
         outputs = model(inputs)
+        loss = criterion(outputs, labels)
 
         predictions = torch.argmax(outputs, dim=-1).cpu().numpy()
         y_valid_labels.append(labels.cpu().numpy())
