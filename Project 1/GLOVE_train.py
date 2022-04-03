@@ -46,7 +46,7 @@ class TextDataset(Dataset):
 
     def __getitem__(self, index):
         if self.mode in ['train', 'valid']:
-            return self.data.loc[index, 'text'], self.data.loc[index, 'stars']-1
+            return self.data.loc[index, 'text'], self.data.loc[index, 'stars'] - 1
         else:
             return self.data.loc[index, 'text']
 
@@ -273,8 +273,8 @@ for e in trange(epochs, desc="Epoch: "):
         loss = criterion(outputs, labels)
 
         predictions = torch.argmax(outputs, dim=-1).cpu().numpy()
-        y_valid_labels.append(labels.cpu().numpy())
-        y_pred_labels.append(predictions)
+        y_valid_labels.extend(list(labels.cpu().numpy()))
+        y_pred_labels.extend(list(predictions))
     y_valid_labels = np.array(y_valid_labels).reshape(-1)
     y_pred_labels = np.array(y_pred_labels).reshape(-1)
     print(classification_report(y_valid_labels, y_pred_labels))
@@ -284,7 +284,14 @@ for e in trange(epochs, desc="Epoch: "):
         max_val_f1 = macro_f1
         max_f1_acc = np.mean(y_valid_labels == y_pred_labels)
         max_metrics = classification_report(y_valid_labels, y_pred_labels)
-        torch.save(model, './GLOVE_val_best.pkl')
+
+        y_test_labels = []
+        for inputs in tqdm(test_loader):
+            inputs = torch.stack([encode(t) for t in inputs], dim=0).squeeze().to(device)
+            outputs = model(inputs)
+            predictions = torch.argmax(outputs, dim=-1).cpu().numpy()
+            y_test_labels.extend(list(predictions))
+        np.save('./GLOVE_prediction', y_test_labels)
     print('\n\n\n------------------------------------------\n'
           'MAX F1 {}\tMAX ACC {}\n{}'
           '-----------------------------------------------\n\n'.format(max_val_f1, max_f1_acc, max_metrics))
