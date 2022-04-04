@@ -80,9 +80,16 @@ valid_dataset_tokenized.set_format('torch')
 train_dataloader = DataLoader(train_dataset_tokenized, shuffle=True, batch_size=10)
 valid_dataloader = DataLoader(valid_dataset_tokenized, batch_size=10)
 
+x_test_processed = pd.DataFrame({'text': x_test})
+test_dataset = Dataset.from_pandas(x_test_processed)
+test_dataset_tokenized = test_dataset.map(tokenize_function, batched=True)
+test_dataset_tokenized = test_dataset_tokenized.remove_columns(['text'])
+test_dataset_tokenized.set_format('torch')
+test_dataloader = DataLoader(test_dataset_tokenized, shuffle=False, batch_size=10)
+
 optimizer = AdamW(model.parameters(), lr=5e-5)
 
-device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
+device = torch.device('cuda:1') if torch.cuda.is_available() else torch.device('cpu')
 print(device)
 # device = torch.device('cpu')
 model.to(device)
@@ -143,6 +150,18 @@ for epoch in range(num_epochs):
         max_val_f1 = macro_f1
         max_f1_acc = np.mean(y_valid_labels == y_pred_labels)
         max_metrics = classification_report(y_valid_labels, y_pred_labels)
+
+        y_test_pred = []
+        for batch in test_dataloader:
+            batch = {k: v.to(device) for k, v in batch.items()}
+            with torch.no_grad():
+                outputs = model(**batch)
+
+            logits = outputs.logits
+            predictions = torch.argmax(logits, dim=-1).cpu().numpy()
+            y_test_pred.extend(list(predictions))
+        pred_df = pd.DataFrame({'review_id': test_df['review_id'], 'stars': y_test_pred, 'text': test_df['text']})
+        pred_df.to_csv('./BERT_val_best_pred.csv', index=False)
         torch.save(model, './BERT_val_best.pkl')
     print('\n\n\n---------------------------------\n'
           'MAX F1 {}\tMAX ACC {}\n{}'

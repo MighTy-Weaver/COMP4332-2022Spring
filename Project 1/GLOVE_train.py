@@ -52,7 +52,7 @@ class TextDataset(Dataset):
 
 
 class BiLSTM_model(nn.Module):
-    def __init__(self, spacy, encode_dict, glove_dim, sentence_length, bidirectional=True, hidden_size=256):
+    def __init__(self, spacy, encode_dict, glove_dim, sentence_length, bidirectional=True, hidden_size=384):
         super(BiLSTM_model, self).__init__()
         self.encode_dict = encode_dict
         self.glove_dim = glove_dim
@@ -61,8 +61,8 @@ class BiLSTM_model(nn.Module):
         self.hidden_size = hidden_size
         self.nlp = spacy
 
-        self.LSTM = LSTM(input_size=glove_dim, hidden_size=256, num_layers=2, bias=True, batch_first=True, dropout=0.2,
-                         bidirectional=True)
+        self.LSTM = LSTM(input_size=glove_dim, hidden_size=self.hidden_size, num_layers=4, bias=True, batch_first=True,
+                         dropout=0.2, bidirectional=True)
         self.bn = BatchNorm1d(self.get_output_length())
         self.nn = Linear(in_features=self.get_output_length(), out_features=5)
         self.dropout = Dropout(p=0.2)
@@ -168,9 +168,9 @@ if os.path.exists("./glove/encoded_dict_{}B_{}d.npy".format(args.glove_size, glo
                            allow_pickle=True).item()
 else:
     glove_keys = glove_dict.keys()
-    for i in [train_dataset, valid_dataset, test_dataset]:
+    for i in [test_dataset, train_dataset, valid_dataset]:
         for j in trange(len(i)):
-            text = i[j][0]
+            text = i[j][0] if type(i[j]) == tuple else i[j]
             if len(nlp(text)) > max_length:
                 max_length = len(nlp(text))
             for token in nlp(text):
@@ -221,7 +221,8 @@ model = BiLSTM_model(spacy=nlp, encode_dict=encoded_dict, glove_dim=embedding_di
 
 train_loader = DataLoader(train_dataset, batch_size=BS, shuffle=True)
 valid_loader = DataLoader(valid_dataset, batch_size=BS, shuffle=True)
-test_loader = DataLoader(test_dataset, batch_size=BS, shuffle=True)
+test_loader = DataLoader(test_dataset, batch_size=BS, shuffle=False)
+test_csv = pd.read_csv('./data/test.csv', index_col=None)
 
 criterion = CrossEntropyLoss()
 optimizer = AdamW(model.parameters(), lr=LR)
@@ -291,7 +292,8 @@ for e in trange(epochs, desc="Epoch: "):
             outputs = model(inputs)
             predictions = torch.argmax(outputs, dim=-1).cpu().numpy()
             y_test_labels.extend(list(predictions))
-        np.save('./GLOVE_prediction', y_test_labels)
+        pred_df = pd.DataFrame({'review_id': test_csv['review_id'], 'stars': y_test_labels, 'text': test_csv['text']})
+        pred_df.to_csv('./GLOVE_pred.csv', index=False)
     print('\n\n\n------------------------------------------\n'
           'MAX F1 {}\tMAX ACC {}\n{}'
           '-----------------------------------------------\n\n'.format(max_val_f1, max_f1_acc, max_metrics))
