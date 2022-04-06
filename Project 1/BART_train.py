@@ -137,6 +137,8 @@ max_val_f1 = 0
 max_f1_acc = 0
 max_metrics = None
 
+print("parameter number is:", sum(p.numel() for p in model.parameters()))
+
 for epoch in range(num_epochs):
     model.train()
     total_acc, total_loss, total_count = 0, 0, 0
@@ -193,6 +195,7 @@ for epoch in range(num_epochs):
             predictions = torch.argmax(logits, dim=-1).cpu().numpy()
             y_test_pred.extend(list(predictions))
         pred_df = pd.DataFrame({'review_id': test_df['review_id'], 'stars': y_test_pred, 'text': test_df['text']})
+        pred_df['stars'] = pred_df['stars'] + 1
         pred_df.to_csv('./BART_val_best_pred.csv', index=False)
         torch.save(model, './BART_val_best.pkl')
     print('\n\n\nMAX F1 {}\tMAX ACC {}\n{}\n\n'.format(max_val_f1, max_f1_acc, max_metrics))

@@ -161,6 +161,7 @@ for epoch in range(num_epochs):
             predictions = torch.argmax(logits, dim=-1).cpu().numpy()
             y_test_pred.extend(list(predictions))
         pred_df = pd.DataFrame({'review_id': test_df['review_id'], 'stars': y_test_pred, 'text': test_df['text']})
+        pred_df['stars'] = pred_df['stars'] + 1
         pred_df.to_csv('./BERT_val_best_pred.csv', index=False)
         torch.save(model, './BERT_val_best.pkl')
     print('\n\n\n---------------------------------\n'

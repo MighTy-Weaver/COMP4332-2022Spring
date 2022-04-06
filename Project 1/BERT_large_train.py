@@ -6,43 +6,9 @@ from sklearn.metrics import classification_report
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from transformers import AdamW
-from transformers import AutoConfig
+from transformers import AutoModelForSequenceClassification
 from transformers import AutoTokenizer
-from transformers import DistilBertModel
 from transformers import get_scheduler
-from transformers.modeling_outputs import TokenClassifierOutput
-
-
-class CustomModel(torch.nn.Module):
-    def __init__(self, num_labels=5, checkpoint=None):
-        super(CustomModel, self).__init__()
-        self.num_labels = num_labels
-
-        # Load Model with given checkpoint and extract its body
-        if checkpoint is None:
-            checkpoint = "distilbert-base-uncased"
-        self.model = DistilBertModel.from_pretrained(
-            checkpoint,
-            config=AutoConfig.from_pretrained(checkpoint, output_attentions=True, output_hidden_states=True))
-        self.dropout = torch.nn.Dropout(0.1)
-        self.classifier = torch.nn.Linear(768, num_labels)  # load and initialize weights
-
-    def forward(self, input_ids=None, attention_mask=None, labels=None):
-        # Extract outputs from the body
-        outputs = self.model(input_ids=input_ids, attention_mask=attention_mask)
-
-        # Add custom layers
-        sequence_output = self.dropout(outputs[0])  # outputs[0]=last hidden state
-
-        logits = self.classifier(sequence_output[:, 0, :].view(-1, 768))  # calculate losses
-
-        loss = None
-        if labels is not None:
-            loss_fct = torch.nn.CrossEntropyLoss()
-            loss = loss_fct(logits.view(-1, self.num_labels), labels.view(-1))
-
-        return TokenClassifierOutput(loss=loss, logits=logits, hidden_states=outputs.hidden_states,
-                                     attentions=outputs.attentions)
 
 
 def load_data(split_name='train', columns=None, folder='data'):
@@ -86,14 +52,13 @@ x_train_processed = pd.DataFrame(
     {'text': x_train, 'label': np.array(y_train.to_list()) - 1})
 x_valid_processed = pd.DataFrame(
     {'text': x_valid, 'label': np.array(y_valid.to_list()) - 1})
-
+# x_valid_processed.to_csv('data_processed/train.csv', index=None)
+# x_valid_processed .to_csv('data_processed/valid.csv', index=None)
 train_dataset = Dataset.from_pandas(x_train_processed)
 valid_dataset = Dataset.from_pandas(x_valid_processed)
 
-device = torch.device('cuda:0') if torch.cuda.is_available() else torch.device('cpu')
-
-tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased")
-model = CustomModel().to(device)
+tokenizer = AutoTokenizer.from_pretrained("bert-large-uncased")
+model = AutoModelForSequenceClassification.from_pretrained("bert-large-uncased", num_labels=5)
 
 
 def tokenize_function(examples):
@@ -112,8 +77,8 @@ valid_dataset_tokenized = valid_dataset_tokenized.rename_column(
     "label", "labels")
 valid_dataset_tokenized.set_format('torch')
 
-train_dataloader = DataLoader(train_dataset_tokenized, shuffle=True, batch_size=16)
-valid_dataloader = DataLoader(valid_dataset_tokenized, batch_size=16)
+train_dataloader = DataLoader(train_dataset_tokenized, shuffle=True, batch_size=10)
+valid_dataloader = DataLoader(valid_dataset_tokenized, batch_size=10)
 
 x_test_processed = pd.DataFrame({'text': x_test})
 test_dataset = Dataset.from_pandas(x_test_processed)
@@ -123,6 +88,11 @@ test_dataset_tokenized.set_format('torch')
 test_dataloader = DataLoader(test_dataset_tokenized, shuffle=False, batch_size=10)
 
 optimizer = AdamW(model.parameters(), lr=5e-5)
+
+device = torch.device('cuda:2') if torch.cuda.is_available() else torch.device('cpu')
+print(device)
+# device = torch.device('cpu')
+model.to(device)
 
 num_epochs = 100
 num_training_steps = num_epochs * len(train_dataloader)
@@ -192,8 +162,8 @@ for epoch in range(num_epochs):
             y_test_pred.extend(list(predictions))
         pred_df = pd.DataFrame({'review_id': test_df['review_id'], 'stars': y_test_pred, 'text': test_df['text']})
         pred_df['stars'] = pred_df['stars'] + 1
-        pred_df.to_csv('./BERT_distilled_val_best_pred.csv', index=False)
-        torch.save(model, './BERT_distilled_val_best.pkl')
+        pred_df.to_csv('./BERT_large_val_best_pred.csv', index=False)
+        torch.save(model, './BERT_large_val_best.pkl')
     print('\n\n\n---------------------------------\n'
           'MAX F1 {}\tMAX ACC {}\n{}'
           '---------------------------------------\n\n'.format(max_val_f1, max_f1_acc, max_metrics))

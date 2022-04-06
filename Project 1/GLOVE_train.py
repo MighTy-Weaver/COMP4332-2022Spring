@@ -293,6 +293,7 @@ for e in trange(epochs, desc="Epoch: "):
             predictions = torch.argmax(outputs, dim=-1).cpu().numpy()
             y_test_labels.extend(list(predictions))
         pred_df = pd.DataFrame({'review_id': test_csv['review_id'], 'stars': y_test_labels, 'text': test_csv['text']})
+        pred_df['stars'] = pred_df['stars'] + 1
         pred_df.to_csv('./GLOVE_pred.csv', index=False)
     print('\n\n\n------------------------------------------\n'
           'MAX F1 {}\tMAX ACC {}\n{}'
