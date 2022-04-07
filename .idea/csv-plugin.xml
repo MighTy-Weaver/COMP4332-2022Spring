@@ -3,13 +3,6 @@
   <component name="CsvFileAttributes">
     <option name="attributeMap">
       <map>
-        <entry key="\Project 1\BERT_val_best_pred.csv">
-          <value>
-            <Attribute>
-              <option name="separator" value="," />
-            </Attribute>
-          </value>
-        </entry>
         <entry key="\Project 1\data\test.csv">
           <value>
             <Attribute>
@@ -25,6 +18,13 @@
           </value>
         </entry>
         <entry key="\Project 1\data\valid.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\Project 1\pred.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />

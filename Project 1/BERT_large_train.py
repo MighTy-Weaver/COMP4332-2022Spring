@@ -77,19 +77,19 @@ valid_dataset_tokenized = valid_dataset_tokenized.rename_column(
     "label", "labels")
 valid_dataset_tokenized.set_format('torch')
 
-train_dataloader = DataLoader(train_dataset_tokenized, shuffle=True, batch_size=10)
-valid_dataloader = DataLoader(valid_dataset_tokenized, batch_size=10)
+train_dataloader = DataLoader(train_dataset_tokenized, shuffle=True, batch_size=6)
+valid_dataloader = DataLoader(valid_dataset_tokenized, batch_size=6)
 
 x_test_processed = pd.DataFrame({'text': x_test})
 test_dataset = Dataset.from_pandas(x_test_processed)
 test_dataset_tokenized = test_dataset.map(tokenize_function, batched=True)
 test_dataset_tokenized = test_dataset_tokenized.remove_columns(['text'])
 test_dataset_tokenized.set_format('torch')
-test_dataloader = DataLoader(test_dataset_tokenized, shuffle=False, batch_size=10)
+test_dataloader = DataLoader(test_dataset_tokenized, shuffle=False, batch_size=6)
 
-optimizer = AdamW(model.parameters(), lr=5e-5)
+optimizer = AdamW(model.parameters(), lr=5e-4)
 
-device = torch.device('cuda:2') if torch.cuda.is_available() else torch.device('cpu')
+device = torch.device('cuda:3') if torch.cuda.is_available() else torch.device('cpu')
 print(device)
 # device = torch.device('cpu')
 model.to(device)
@@ -139,8 +139,8 @@ for epoch in range(num_epochs):
 
         logits = outputs.logits
         predictions = torch.argmax(logits, dim=-1).cpu().numpy()
-        y_valid_labels.append(batch['labels'].cpu().numpy())
-        y_pred_labels.append(predictions)
+        y_valid_labels.extend(list(batch['labels'].cpu().numpy()))
+        y_pred_labels.extend(list(predictions))
     y_valid_labels = np.array(y_valid_labels).reshape(-1)
     y_pred_labels = np.array(y_pred_labels).reshape(-1)
     print(classification_report(y_valid_labels, y_pred_labels))

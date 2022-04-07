@@ -105,6 +105,8 @@ max_val_f1 = 0
 max_f1_acc = 0
 max_metrics = None
 
+record = {'trn_loss': [], 'trn_acc': [], 'val_loss': [], 'val_acc': []}
+
 for epoch in range(num_epochs):
     model.train()
     total_acc, total_loss, total_count = 0, 0, 0
@@ -130,8 +132,12 @@ for epoch in range(num_epochs):
                                   'loss': total_loss / total_count,
                                   'acc': total_acc / total_count})
 
+    record['trn_loss'].append(total_loss / total_count)
+    record['trn_acc'].append(total_acc / total_count)
+
     model.eval()
     y_valid_labels, y_pred_labels = [], []
+    val_loss = 0
     for batch in valid_dataloader:
         batch = {k: v.to(device) for k, v in batch.items()}
         with torch.no_grad():
@@ -139,13 +145,18 @@ for epoch in range(num_epochs):
 
         logits = outputs.logits
         predictions = torch.argmax(logits, dim=-1).cpu().numpy()
-        y_valid_labels.append(batch['labels'].cpu().numpy())
-        y_pred_labels.append(predictions)
+        y_valid_labels.extend(list(batch['labels'].cpu().numpy()))
+        y_pred_labels.extend(list(predictions))
+        val_loss += outputs.loss.item()
     y_valid_labels = np.array(y_valid_labels).reshape(-1)
     y_pred_labels = np.array(y_pred_labels).reshape(-1)
     print(classification_report(y_valid_labels, y_pred_labels))
     macro_f1 = classification_report(y_valid_labels, y_pred_labels, output_dict=True)['macro avg']['f1-score']
     print('val accuracy', np.mean(y_valid_labels == y_pred_labels))
+
+    record['val_loss'].append(val_loss / len(valid_dataloader))
+    record['val_acc'].append(np.mean(y_valid_labels == y_pred_labels))
+    np.save('./BERT_recording.npy', record)
     if macro_f1 >= max_val_f1:
         max_val_f1 = macro_f1
         max_f1_acc = np.mean(y_valid_labels == y_pred_labels)
