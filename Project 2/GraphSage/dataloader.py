@@ -7,35 +7,6 @@ import pandas as pd
 from torch.utils.data import Dataset
 
 
-class SocialNetworkDataset(Dataset):
-
-
-def load_data(file_name):
-    """
-    read edges from an edge file
-    """
-    edges = []
-    df = pd.read_csv(file_name)
-    for idx, row in df.iterrows():
-        user_id, friends = row["user_id"], eval(row["friends"])
-        edges.extend((user_id, friend) for friend in friends)
-    edges = sorted(edges)
-
-    return edges
-
-
-def load_test_data(file_name):
-    """
-    read edges from an edge file
-    """
-    scores = []
-    df = pd.read_csv(file_name)
-    edges = [(row["src"], row["dst"]) for idx, row in df.iterrows()]
-    edges = sorted(edges)
-
-    return edges
-
-
 def generate_false_edges(true_edges, num_false_edges=5):
     """
     generate false edges given true edges
@@ -74,3 +45,45 @@ def construct_graph_from_edges(edges):
     print("number of edges:", graph.number_of_edges())
 
     return graph
+
+
+class SocialNetworkDataset(Dataset):
+    def __init__(self, total_length, mode='train', negative_sample=5):
+        assert mode in ['train', 'valid', 'test']
+        self.mode = mode
+        self.negative_samples = negative_sample
+        self.edges = []
+        data = pd.read_csv(f'./data/{mode}', index_col=None)
+        for idx, row in data.iterrows():
+            user_id, friends = row["user_id"], eval(row["friends"])
+            self.edges.extend((user_id, friend) for friend in friends)
+        self.edges = sorted(self.edges)
+        if total_length:
+            self.negative_samples = generate_false_edges(self.edges, num_false_edges=total_length - len(self.edges))
+        elif negative_sample == 'same':
+            self.negative_samples = generate_false_edges(self.edges, num_false_edges=len(self.edges))
+        elif type(negative_sample) is int:
+            self.negative_samples = generate_false_edges(self.edges, num_false_edges=negative_sample)
+
+        self.total_edges = self.edges + self.negative_samples
+
+        self.graph = construct_graph_from_edges(self.edges)
+        self.total_graph = construct_graph_from_edges(self.total_edges)
+
+    def __len__(self):
+        return len(self.total_edges)
+
+    def get_positive_edges(self):
+        return self.edges
+
+    def get_total_edges(self):
+        return self.total_edges
+
+    def get_total_graph(self):
+        return self.total_graph
+
+    def get_positive_graph(self):
+        return self.graph
+
+    def __getitem__(self, item):
+        return self.total_edges[item]
