@@ -49,6 +49,12 @@ def construct_graph_from_edges(edges):
 
 class SocialNetworkDataset(Dataset):
     def __init__(self, total_length, mode='train', negative_sample=5):
+        """
+        The Social Network dataset class.
+        :param total_length: Total number of edges (pos+neg), will overwrite negative_sample parameter.
+        :param mode: 'train','valid','test'
+        :param negative_sample: if int, then will generate number of negative samples. also can be 'same', generate same number as positive edges
+        """
         assert mode in ['train', 'valid', 'test']
         self.mode = mode
         self.negative_samples = negative_sample
