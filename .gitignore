@@ -130,3 +130,5 @@ dmypy.json
 /Project 1/try.py
 /Project 1/glove/
 /Project 1/4.zip
+/Project 2/node2vec_result_dict.npy
+/Project 2/node2vec_best_model.bin

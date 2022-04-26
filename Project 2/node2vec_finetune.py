@@ -344,48 +344,51 @@ def write_valid_ans(file_name, edges, scores):
     df.to_csv(file_name, index=False)
 
 
-train_file = "data/train.csv"
-valid_file = "data/valid.csv"
-test_file = "data/test.csv"
+if __name__ == '__main__':
+    train_file = "data/train.csv"
+    valid_file = "data/valid.csv"
+    test_file = "data/test.csv"
 
-np.random.seed(0)
-train_edges = load_data(train_file)
-graph = construct_graph_from_edges(train_edges)
-valid_edges = load_data(valid_file)
-false_edges = generate_false_edges(train_edges + valid_edges, 40000 - len(valid_edges))
-test_edges = load_test_data(test_file)
+    np.random.seed(0)
+    train_edges = load_data(train_file)
+    graph = construct_graph_from_edges(train_edges)
+    valid_edges = load_data(valid_file)
+    false_edges = generate_false_edges(train_edges + valid_edges, 40000 - len(valid_edges))
+    test_edges = load_test_data(test_file)
 
-np.random.seed(0)
+    np.random.seed(0)
 
-node_dim_choices = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100]
-num_walks_choices = [10, 20, 30]
-walk_length_choices = [10, 20, 30]
-p_choices = [0.25, 0.5, 0.75, 1]
-q_choices = [0.25, 0.5, 0.75, 1]
+    node_dim_choices = [5, 7, 8, 9, 10, 11, 12, 13, 15, 20, 30, 40, 50]
+    num_walks_choices = [5, 8, 10, 15, 20, 30]
+    walk_length_choices = [5, 8, 10, 15, 20, 30]
+    p_choices = [0.25, 0.5, 0.75, 1]
+    q_choices = [0.25, 0.5, 0.75, 1]
 
-node2vec_auc_scores = dict()
-best_model = None
+    node2vec_auc_scores = dict()
+    best_model = None
 
-progress_bar = tqdm(
-    range(len(node_dim_choices) * len(num_walks_choices) * len(walk_length_choices) * len(p_choices) * len(q_choices)))
-for node_dim in node_dim_choices:
-    for num_walks in num_walks_choices:
-        for walk_length in walk_length_choices:
-            for p in p_choices:
-                for q in q_choices:
-                    print("node dim: %d,\tnum_walks: %d,\twalk_length: %d,\tp: %.2f,\tq: %.2f" % (
-                        node_dim, num_walks, walk_length, p, q), end="\t")
-                    alias_nodes, alias_edges = preprocess_transition_probs(graph, p=p, q=q)
-                    model = build_node2vec(graph, alias_nodes, alias_edges,
-                                           node_dim=node_dim, num_walks=num_walks, walk_length=walk_length)
-                    node2vec_auc_scores[(node_dim, num_walks, walk_length, p, q)] = get_auc_score(model, valid_edges,
-                                                                                                  false_edges)
-                    print("auc: %.4f" % (node2vec_auc_scores[(node_dim, num_walks, walk_length, p, q)]))
-                    np.save('./node2vec_result_dict.npy', node2vec_auc_scores)
-                    if get_auc_score(model, valid_edges, false_edges) >= max(list(node2vec_auc_scores.values())):
-                        model.wv.save_word2vec_format('./node2vec_best_model.bin', binary=True)
-                        best_model = model
-                        scores = [get_cosine_sim(best_model, src, dst) for src, dst in test_edges]
-                        write_pred("data/pred_node2vec.csv", test_edges, scores)
-                    print("MAX: ", max(list(node2vec_auc_scores.values())))
-                    progress_bar.update(1)
+    progress_bar = tqdm(
+        range(len(node_dim_choices) * len(num_walks_choices) * len(walk_length_choices) * len(p_choices) * len(
+            q_choices)))
+    for node_dim in node_dim_choices:
+        for num_walks in num_walks_choices:
+            for walk_length in walk_length_choices:
+                for p in p_choices:
+                    for q in q_choices:
+                        print("node dim: %d,\tnum_walks: %d,\twalk_length: %d,\tp: %.2f,\tq: %.2f" % (
+                            node_dim, num_walks, walk_length, p, q), end="\t")
+                        alias_nodes, alias_edges = preprocess_transition_probs(graph, p=p, q=q)
+                        model = build_node2vec(graph, alias_nodes, alias_edges,
+                                               node_dim=node_dim, num_walks=num_walks, walk_length=walk_length)
+                        node2vec_auc_scores[(node_dim, num_walks, walk_length, p, q)] = get_auc_score(model,
+                                                                                                      valid_edges,
+                                                                                                      false_edges)
+                        print("auc: %.4f" % (node2vec_auc_scores[(node_dim, num_walks, walk_length, p, q)]))
+                        np.save('./node2vec_result_dict.npy', node2vec_auc_scores)
+                        if get_auc_score(model, valid_edges, false_edges) >= max(list(node2vec_auc_scores.values())):
+                            model.wv.save_word2vec_format('./node2vec_best_model.bin', binary=True)
+                            best_model = model
+                            scores = [get_cosine_sim(best_model, src, dst) for src, dst in test_edges]
+                            write_pred("data/pred_node2vec.csv", test_edges, scores)
+                        print("MAX: ", max(list(node2vec_auc_scores.values())))
+                        progress_bar.update(1)
