@@ -25,7 +25,7 @@ for i in range(0, 5):
         best_values = [max([record[j] for j in record.keys() if j[i] == c]) for c in index_dict[i]]
         print(range_dict[i], best_values)
         plt.plot(index_dict[i], best_values)
-        plt.xlabel("Choices of {}".format(range_dict[i]))
+        plt.xlabel("Choices of {}\nHighest AUC score: {}".format(range_dict[i], round(max(best_values), 5)))
         plt.ylabel("Best AUC score achieved")
         plt.title("Highest AUC score achieved with different settings of {}".format(range_dict[i]))
         plt.savefig('./node2vec_plot/{}.png'.format(range_dict[i]), bbox_inches='tight')

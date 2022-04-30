@@ -4,6 +4,8 @@ from itertools import chain
 import networkx as nx
 import numpy as np
 import pandas as pd
+import torch
+from sklearn.utils import shuffle
 from torch.utils.data import Dataset
 
 
@@ -48,7 +50,7 @@ def construct_graph_from_edges(edges):
 
 
 class SocialNetworkDataset(Dataset):
-    def __init__(self, total_length, mode='train', negative_sample=5):
+    def __init__(self, embedding: dict, total_length=None, mode='train', negative_sample=5, test=False):
         """
         The Social Network dataset class.
         :param total_length: Total number of edges (pos+neg), will overwrite negative_sample parameter.
@@ -59,7 +61,8 @@ class SocialNetworkDataset(Dataset):
         self.mode = mode
         self.negative_samples = negative_sample
         self.edges = []
-        data = pd.read_csv(f'./data/{mode}', index_col=None)
+        self.embedding = embedding
+        data = pd.read_csv(f'../data/{mode}.csv', index_col=None)
         for idx, row in data.iterrows():
             user_id, friends = row["user_id"], eval(row["friends"])
             self.edges.extend((user_id, friend) for friend in friends)
@@ -72,6 +75,11 @@ class SocialNetworkDataset(Dataset):
             self.negative_samples = generate_false_edges(self.edges, num_false_edges=negative_sample)
 
         self.total_edges = self.edges + self.negative_samples
+
+        self.total_edges = shuffle(self.total_edges, random_state=621)
+
+        if test:
+            self.total_edges = self.total_edges[:500]
 
         self.graph = construct_graph_from_edges(self.edges)
         self.total_graph = construct_graph_from_edges(self.total_edges)
@@ -92,4 +100,6 @@ class SocialNetworkDataset(Dataset):
         return self.graph
 
     def __getitem__(self, item):
-        return self.total_edges[item]
+        edge = self.total_edges[item]
+        return torch.tensor(list(self.embedding[edge[0]]) + list(self.embedding[edge[1]]),
+                            dtype=torch.float32), torch.tensor(edge in self.edges, dtype=torch.float32)
