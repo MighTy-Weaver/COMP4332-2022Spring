@@ -38,6 +38,34 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="\Project 2\data\pred_nn.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\Project 2\data\pred_node2vec.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\Project 2\data\pred_node2vec_cheat.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\Project 2\data\pred_node2vec_cheat_submit.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="\Project 2\data\test.csv">
           <value>
             <Attribute>
@@ -45,7 +73,28 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="\Project 2\data\test_ans.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="\Project 2\data\train.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\Project 2\data\valid.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\Project 2\data\yelp.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />

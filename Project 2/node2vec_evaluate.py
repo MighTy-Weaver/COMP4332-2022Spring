@@ -1,3 +1,5 @@
+from itertools import combinations
+
 import numpy as np
 import os
 
@@ -32,3 +34,17 @@ for i in range(0, 5):
         plt.clf()
     except ValueError:
         pass
+
+for i1, i2 in combinations(range(0, 5), 2):
+    bst_matrix = [[max([record[j] for j in record.keys() if j[i1] == c1 and j[i2] == c2]) for c1 in index_dict[i1]] for
+                  c2 in index_dict[i2]]
+    matrix = np.array(bst_matrix)
+    print(matrix.shape)
+    plt.imshow(matrix, cmap='hot', interpolation='nearest')
+    plt.xlabel(range_dict[i1])
+    plt.xticks(ticks=range(len(index_dict[i1])), labels=index_dict[i1])
+    plt.ylabel(range_dict[i2])
+    plt.yticks(ticks=range(len(index_dict[i2])), labels=index_dict[i2])
+    plt.colorbar()
+    plt.savefig('./node2vec_plot/HEAT_{}_AND_{}.png'.format(range_dict[i1], range_dict[i2]), bbox_inches='tight')
+    plt.clf()
