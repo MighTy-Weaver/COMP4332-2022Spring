@@ -358,11 +358,11 @@ if __name__ == '__main__':
 
     np.random.seed(0)
 
-    node_dim_choices = [10]  # [5, 7, 8, 9, 10, 11, 12, 13, 15, 20, 30, 40, 50]
-    num_walks_choices = [8]  # [5, 8, 10, 15, 20, 30]
-    walk_length_choices = [20]  # [5, 8, 10, 15, 20, 30]
-    p_choices = [1]  # [0.25, 0.5, 0.75, 1]
-    q_choices = [1]  # [0.25, 0.5, 0.75, 1]
+    node_dim_choices = [5, 7, 8, 9, 10, 11, 12, 13, 15, 20, 30, 40, 50]
+    num_walks_choices = [5, 8, 10, 15, 20, 30]
+    walk_length_choices = [5, 8, 10, 15, 20, 30]
+    p_choices = [0.25, 0.5, 0.75, 1]
+    q_choices = [0.25, 0.5, 0.75, 1]
     # [(10, 8, 20, 1, 1)]
     node2vec_auc_scores = dict()
     best_model = None
