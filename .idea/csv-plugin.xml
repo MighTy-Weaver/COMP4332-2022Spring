@@ -31,14 +31,14 @@
             </Attribute>
           </value>
         </entry>
-        <entry key="\Project 2\data\pred_deepwalk.csv">
+        <entry key="\Project 2\data\pred.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />
             </Attribute>
           </value>
         </entry>
-        <entry key="\Project 2\data\pred_nn.csv">
+        <entry key="\Project 2\data\pred_deepwalk.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />
@@ -59,7 +59,7 @@
             </Attribute>
           </value>
         </entry>
-        <entry key="\Project 2\data\pred_node2vec_cheat_submit.csv">
+        <entry key="\Project 2\data\pred_valid.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />
@@ -95,6 +95,20 @@
           </value>
         </entry>
         <entry key="\Project 2\data\yelp.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\Project 2\for_weiqi\test_edges.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\Project 2\for_weiqi\valid_edges.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />
