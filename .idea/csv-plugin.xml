@@ -101,20 +101,6 @@
             </Attribute>
           </value>
         </entry>
-        <entry key="\Project 2\for_weiqi\test_edges.csv">
-          <value>
-            <Attribute>
-              <option name="separator" value="," />
-            </Attribute>
-          </value>
-        </entry>
-        <entry key="\Project 2\for_weiqi\valid_edges.csv">
-          <value>
-            <Attribute>
-              <option name="separator" value="," />
-            </Attribute>
-          </value>
-        </entry>
       </map>
     </option>
   </component>
