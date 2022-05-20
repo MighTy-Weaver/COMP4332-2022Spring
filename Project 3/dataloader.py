@@ -1,7 +1,6 @@
 import pandas as pd
 import torch
 from torch.utils.data import Dataset
-from transformers import BertTokenizer, BertModel
 
 
 class YelpDataset(Dataset):
@@ -21,7 +20,9 @@ class YelpDataset(Dataset):
             drop=True).drop(['user_yelping_since', 'user_elite', 'item_attributes', 'item_hours'], axis=1)
         if self.mode in ['train', 'valid']:
             self.stars = self.data_merged['stars']
-            self.data_merged = self.data_merged.drop(['stars'], axis=1)
+        self.data_merged = self.data_merged.drop(['stars'], axis=1)
+        self.str_list = ['user_id', 'business_id', 'user_name', 'item_name', 'item_address', 'item_city', 'item_state',
+                         'item_postal_code', 'item_categories']
 
     def __len__(self):
         return len(self.data_merged)
@@ -29,8 +30,8 @@ class YelpDataset(Dataset):
     def __getitem__(self, item):
         data_list = []
         for c in list(self.data_merged):
-            if type(self.data_merged.loc[item, c]) is str:
-                token = self.tokenizer(self.data_merged.loc[item, c], return_tensors="pt").to(self.device)
+            if c in self.str_list:
+                token = self.tokenizer(str(self.data_merged.loc[item, c]), return_tensors="pt").to(self.device)
                 embedding = self.encoder(**token)
                 data_list.extend(torch.mean(embedding.last_hidden_state, dim=1).detach().cpu().squeeze().tolist())
             else:
