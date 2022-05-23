@@ -15,9 +15,8 @@ from transformers import BertModel
 from transformers import BertTokenizer
 from transformers import get_scheduler
 
-from model import NN_regressor
-
 from dataloader import YelpDataset
+from model import NN_regressor
 
 
 def rmse(pred, actual):
@@ -91,6 +90,7 @@ for e in trange(epochs, desc="Epoch: "):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+        lr_scheduler.step()
 
         train_label.extend(labels.detach().cpu().tolist())
         train_pred.extend(outputs.detach().cpu().tolist())

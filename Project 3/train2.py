@@ -91,6 +91,7 @@ for e in trange(epochs, desc="Epoch: "):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+        lr_scheduler.step()
 
         train_label.extend(labels.detach().cpu().tolist())
         train_pred.extend(outputs.detach().cpu().tolist())
