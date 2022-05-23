@@ -112,17 +112,17 @@ for e in trange(epochs, desc="Epoch: "):
         if not args.test:
             valid_csv = pd.read_csv('./data/valid.csv', index_col=None)
             valid_csv['stars_pred'] = valid_pred
-            valid_csv.to_csv('./data/valid_pred.csv', index=False)
+            valid_csv.to_csv('./data/valid_pred_v1.csv', index=False)
 
         y_test_labels = []
         for inputs in tqdm(test_loader, desc="Test batch: "):
             inputs = inputs.to(device)
             outputs = model(inputs)
-            y_test_labels.extend(list(outputs.detach().cpu()))
+            y_test_labels.extend(outputs.detach().cpu().tolist())
         if not args.test:
             test_csv = pd.read_csv('./data/test.csv', index_col=None)
             test_csv['stars'] = y_test_labels
-            test_csv.to_csv('./data/test_pred.csv', index=False)
+            test_csv.to_csv('./data/test_pred_v1.csv', index=False)
     print('\n\n\n------------------------------------------\n'
           'MIN RMSE valid {}\ttrain {} valid {}\n'
           '-----------------------------------------------\n\n'.format(min_RMSE, train_rmse, valid_rmse))
