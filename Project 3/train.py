@@ -58,7 +58,7 @@ encoder = BertModel.from_pretrained('bert-base-uncased').to(device)
 
 train_dataset = YelpDataset('train', encoder=encoder, tokenizer=tokenizer, device=device, test=args.test)
 valid_dataset = YelpDataset('valid', encoder=encoder, tokenizer=tokenizer, device=device, test=args.test)
-test_dataset = YelpDataset('test', encoder=encoder, tokenizer=tokenizer, device=device, test=0)
+test_dataset = YelpDataset('test', encoder=encoder, tokenizer=tokenizer, device=device, test=args.test)
 
 model = NN_regressor(in_dim=6934, out_dim=1).to(device)
 
@@ -109,19 +109,20 @@ for e in trange(epochs, desc="Epoch: "):
     valid_rmse = rmse(np.array(valid_pred), np.array(valid_label))
     if valid_rmse <= min_RMSE:
         min_RMSE = valid_rmse
-
-        # valid_csv = pd.read_csv('./data/valid.csv', index_col=None)
-        # valid_csv['stars_pred'] = valid_pred
-        # valid_csv.to_csv('./data/valid_pred.csv', index=False)
+        if not args.test:
+            valid_csv = pd.read_csv('./data/valid.csv', index_col=None)
+            valid_csv['stars_pred'] = valid_pred
+            valid_csv.to_csv('./data/valid_pred.csv', index=False)
 
         y_test_labels = []
         for inputs in tqdm(test_loader, desc="Test batch: "):
             inputs = inputs.to(device)
             outputs = model(inputs)
             y_test_labels.extend(list(outputs.detach().cpu()))
-        test_csv = pd.read_csv('./data/test.csv', index_col=None)
-        test_csv['stars'] = y_test_labels
-        test_csv.to_csv('./data/test_pred.csv', index=False)
+        if not args.test:
+            test_csv = pd.read_csv('./data/test.csv', index_col=None)
+            test_csv['stars'] = y_test_labels
+            test_csv.to_csv('./data/test_pred.csv', index=False)
     print('\n\n\n------------------------------------------\n'
           'MIN RMSE valid {}\ttrain {} valid {}\n'
           '-----------------------------------------------\n\n'.format(min_RMSE, train_rmse, valid_rmse))

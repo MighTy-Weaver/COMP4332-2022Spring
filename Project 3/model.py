@@ -19,5 +19,10 @@ class NN_regressor(nn.Module):
         out2 = self.nn2(out1)
         out3 = self.nn3(out2)
         out4 = self.nn4(out3)
-        out = self.nn5(out4)
-        return out
+        return self.nn5(out4)
+
+
+class NN_regressor_v2(nn.Module):
+    def __init__(self, in_dim_1, in_dim_2, embedding_dim=798, out_dim=1):
+        super(NN_regressor_v2, self).__init__()
+
