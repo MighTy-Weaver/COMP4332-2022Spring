@@ -80,6 +80,13 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="\Project 3\data\test.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="\Project 3\data\train.csv">
           <value>
             <Attribute>
@@ -88,6 +95,13 @@
           </value>
         </entry>
         <entry key="\Project 3\data\user.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
+        <entry key="\Project 3\data\valid.csv">
           <value>
             <Attribute>
               <option name="separator" value="," />
