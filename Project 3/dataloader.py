@@ -4,7 +4,7 @@ from torch.utils.data import Dataset
 
 
 class YelpDataset(Dataset):
-    def __init__(self, mode='train', encoder=None, tokenizer=None, device=None):
+    def __init__(self, mode='train', encoder=None, tokenizer=None, device=None, test=0):
         if mode not in ['train', 'valid', 'test']:
             raise NotImplementedError("Must be one of train, valid, and test")
         self.mode = mode
@@ -23,6 +23,9 @@ class YelpDataset(Dataset):
         self.data_merged = self.data_merged.drop(['stars'], axis=1)
         self.str_list = ['user_id', 'business_id', 'user_name', 'item_name', 'item_address', 'item_city', 'item_state',
                          'item_postal_code', 'item_categories']
+
+        if test:
+            self.data_merged = self.data_merged.sample(n=200).reset_index(drop=True)
 
     def __len__(self):
         return len(self.data_merged)

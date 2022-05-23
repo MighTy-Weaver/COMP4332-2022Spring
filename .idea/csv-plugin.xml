@@ -122,6 +122,13 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="\Project 3\data\valid.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
       </map>
     </option>
   </component>
