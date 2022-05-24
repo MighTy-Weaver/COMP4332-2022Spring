@@ -47,10 +47,11 @@ class YelpDataset(Dataset):
 
 
 class YelpDataset_v2(Dataset):
-    def __init__(self, mode='train', encoder=None, tokenizer=None, device=None, test=0):
+    def __init__(self, mode='train', encoder=None, tokenizer=None, device=None, test=0, classify=False):
         if mode not in ['train', 'valid', 'test']:
             raise NotImplementedError("Must be one of train, valid, and test")
         self.mode = mode
+        self.classify = classify
         self.data = pd.read_csv(f'./data/{mode}.csv', index_col=None)
         self.device = device
         self.encoder = encoder
@@ -85,7 +86,9 @@ class YelpDataset_v2(Dataset):
                 data_list.append(self.data_merged.loc[item, c])
         embedding_final = torch.tensor(embedding_list, dtype=torch.float)
         feature_final = torch.tensor(data_list, dtype=torch.float)
-        if self.mode in ['train', 'valid']:
-            return embedding_final, feature_final, torch.tensor(self.data.loc[item, 'stars'], dtype=torch.float)
-        else:
+        if self.mode not in ['train', 'valid']:
             return embedding_final, feature_final
+        if self.classify:
+            return embedding_final, feature_final, torch.tensor(self.data.loc[item, 'stars'], dtype=torch.float) - 1
+        else:
+            return embedding_final, feature_final, torch.tensor(self.data.loc[item, 'stars'], dtype=torch.float)

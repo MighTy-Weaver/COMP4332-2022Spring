@@ -13,6 +13,8 @@ from tqdm import tqdm
 from tqdm import trange
 from transformers import BertModel
 from transformers import BertTokenizer
+from transformers import DistilBertModel
+from transformers import DistilBertTokenizer
 from transformers import get_scheduler
 
 from dataloader import YelpDataset
@@ -33,6 +35,7 @@ parser.add_argument("--epoch", type=int, default=300, required=False)
 parser.add_argument("--bs", type=int, default=128, required=False)
 parser.add_argument("--lr", type=float, default=5e-5, required=False)
 parser.add_argument("--test", type=int, default=0)
+parser.add_argument("--model", type=str, default='bert')
 args = parser.parse_args()
 
 # Set the GPU device
@@ -52,8 +55,12 @@ epochs = args.epoch
 BS = args.bs
 LR = args.lr
 
-tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-encoder = BertModel.from_pretrained('bert-base-uncased').to(device)
+if args.model == 'bert':
+    tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+    encoder = BertModel.from_pretrained('bert-base-uncased').to(device)
+elif args.model == 'distilbert':
+    tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
+    encoder = DistilBertModel.from_pretrained("distilbert-base-uncased").to(device)
 
 train_dataset = YelpDataset('train', encoder=encoder, tokenizer=tokenizer, device=device, test=args.test)
 valid_dataset = YelpDataset('valid', encoder=encoder, tokenizer=tokenizer, device=device, test=args.test)
@@ -112,7 +119,7 @@ for e in trange(epochs, desc="Epoch: "):
         if not args.test:
             valid_csv = pd.read_csv('./data/valid.csv', index_col=None)
             valid_csv['stars_pred'] = valid_pred
-            valid_csv.to_csv('./data/valid_pred_v1.csv', index=False)
+            valid_csv.to_csv('./data/valid_pred_v1_{}.csv'.format(args.model), index=False)
 
         y_test_labels = []
         for inputs in tqdm(test_loader, desc="Test batch: "):
@@ -122,7 +129,7 @@ for e in trange(epochs, desc="Epoch: "):
         if not args.test:
             test_csv = pd.read_csv('./data/test.csv', index_col=None)
             test_csv['stars'] = y_test_labels
-            test_csv.to_csv('./data/test_pred_v1.csv', index=False)
+            test_csv.to_csv('./data/test_pred_v1_{}.csv'.format(args.model), index=False)
     print('\n\n\n------------------------------------------\n'
           'MIN RMSE valid {}\ttrain {} valid {}\n'
           '-----------------------------------------------\n\n'.format(min_RMSE, train_rmse, valid_rmse))
