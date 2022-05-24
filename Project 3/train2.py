@@ -121,7 +121,7 @@ for e in trange(epochs, desc="Epoch: "):
             input1 = input1.to(device)
             input2 = input2.to(device)
             outputs = model(input1, input2)
-            y_test_labels.extend(list(outputs.detach().cpu()))
+            y_test_labels.extend(outputs.detach().cpu().tolist())
         if not args.test:
             test_csv = pd.read_csv('./data/test.csv', index_col=None)
             test_csv['stars'] = y_test_labels
