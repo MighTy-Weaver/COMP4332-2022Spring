@@ -17,8 +17,8 @@ from transformers import DistilBertModel
 from transformers import DistilBertTokenizer
 from transformers import get_scheduler
 
-from dataloader import YelpDataset_v2
-from model import NN_classifier
+from dataloader import YelpDataset
+from model import NN_regressor
 
 
 def rmse(pred, actual):
@@ -30,11 +30,12 @@ def rmse(pred, actual):
 
 # Set up a argument parser
 parser = argparse.ArgumentParser()
-parser.add_argument("--gpu", type=int, default=1, required=False, help="The number of gpu you want to use")
+parser.add_argument("--gpu", type=int, default=0, required=False, help="The number of gpu you want to use")
 parser.add_argument("--epoch", type=int, default=300, required=False)
-parser.add_argument("--bs", type=int, default=512, required=False)
+parser.add_argument("--bs", type=int, default=128, required=False)
 parser.add_argument("--lr", type=float, default=5e-5, required=False)
 parser.add_argument("--test", type=int, default=0)
+parser.add_argument("--model", type=str, default='bert')
 args = parser.parse_args()
 
 # Set the GPU device
@@ -54,23 +55,24 @@ epochs = args.epoch
 BS = args.bs
 LR = args.lr
 
-tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
-encoder = DistilBertModel.from_pretrained("distilbert-base-uncased").to(device)
+if args.model == 'bert':
+    tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+    encoder = BertModel.from_pretrained('bert-base-uncased').to(device)
+elif args.model == 'distilbert':
+    tokenizer = DistilBertTokenizer.from_pretrained('distilbert-base-uncased')
+    encoder = DistilBertModel.from_pretrained("distilbert-base-uncased").to(device)
 
-train_dataset = YelpDataset_v2('train', encoder=encoder, tokenizer=tokenizer, device=device, test=args.test,
-                               classify=True)
-valid_dataset = YelpDataset_v2('valid', encoder=encoder, tokenizer=tokenizer, device=device, test=args.test,
-                               classify=True)
-test_dataset = YelpDataset_v2('test', encoder=encoder, tokenizer=tokenizer, device=device, test=args.test)
+train_dataset = YelpDataset('train', encoder=encoder, tokenizer=tokenizer, device=device, test=args.test)
+valid_dataset = YelpDataset('valid', encoder=encoder, tokenizer=tokenizer, device=device, test=args.test)
+test_dataset = YelpDataset('test', encoder=encoder, tokenizer=tokenizer, device=device, test=args.test)
 
-model = NN_classifier().to(device)
+model = NN_regressor(in_dim=6934, out_dim=1).to(device)
 
 train_loader = DataLoader(train_dataset, batch_size=BS, shuffle=True)
-valid_loader = DataLoader(valid_dataset, batch_size=len(valid_dataset), shuffle=False)
+valid_loader = DataLoader(valid_dataset, batch_size=BS, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=len(test_dataset), shuffle=False)
 
-criterion = nn.CrossEntropyLoss()
-mse = nn.MSELoss()
+criterion = nn.MSELoss()
 optimizer = AdamW(list(model.parameters()) + list(encoder.parameters()), lr=LR)
 
 lr_scheduler = get_scheduler(name='linear', optimizer=optimizer,
@@ -83,57 +85,51 @@ for e in trange(epochs, desc="Epoch: "):
 
     model.train()
     train_label, train_pred = [], []
-    for input1, input2, labels in tqdm(train_loader, desc="Train batch: "):
-        input1 = input1.to(device)
-        input2 = input2.to(device)
-        labels = labels.to(device, dtype=torch.long)
-        outputs = model(input1, input2).squeeze()
-        predictions = torch.argmax(outputs, dim=-1)
-        loss = criterion(outputs, labels)
+    for inputs, labels in tqdm(train_loader, desc="Train batch: "):
+        inputs = inputs.to(device)
+        labels = labels.to(device)
+        outputs = model(inputs).squeeze()
+        # print(outputs.shape,labels.shape)
+        # print(outputs)
+        # print(labels)
+        loss = torch.sqrt(criterion(outputs, labels))
 
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
         lr_scheduler.step()
 
-        predictions = predictions + 1
-        labels = labels + 1
         train_label.extend(labels.detach().cpu().tolist())
-        train_pred.extend(predictions.detach().cpu().tolist())
+        train_pred.extend(outputs.detach().cpu().tolist())
     train_rmse = rmse(np.array(train_pred), np.array(train_label))
     model.eval()
 
     valid_pred, valid_label = [], []
-    for input1, input2, labels in tqdm(valid_loader, desc="Valid batch"):
-        input1 = input1.to(device)
-        input2 = input2.to(device)
-        labels = labels.to(device, dtype=torch.long)
-        outputs = model(input1, input2).squeeze()
-        predictions = torch.argmax(outputs, dim=-1)
+    for inputs, labels in tqdm(valid_loader, desc="Valid batch"):
+        inputs = inputs.to(device)
+        labels = labels.to(device)
+        outputs = model(inputs).squeeze()
+        valid_loss = torch.sqrt(criterion(outputs, labels))
 
-        predictions = predictions + 1
-        labels = labels + 1
-        valid_pred.extend(predictions.detach().cpu().tolist())
+        valid_pred.extend(outputs.detach().cpu().tolist())
         valid_label.extend(labels.detach().cpu().tolist())
     valid_rmse = rmse(np.array(valid_pred), np.array(valid_label))
     if valid_rmse <= min_RMSE:
         min_RMSE = valid_rmse
         if not args.test:
-            valid_csv = pd.read_csv('./data/valid.csv', index_col=None)
+            valid_csv = pd.read_csv('../data/valid.csv', index_col=None)
             valid_csv['stars_pred'] = valid_pred
-            valid_csv.to_csv('./data/valid_pred_v3.csv', index=False)
+            valid_csv.to_csv('./data/valid_pred_v1_{}.csv'.format(args.model), index=False)
 
         y_test_labels = []
-        for input1, input2 in tqdm(test_loader, desc="Test batch: "):
-            input1 = input1.to(device)
-            input2 = input2.to(device)
-            outputs = model(input1, input2)
-            predictions = torch.argmax(outputs, dim=-1) + 1
-            y_test_labels.extend(predictions.detach().cpu().tolist())
+        for inputs in tqdm(test_loader, desc="Test batch: "):
+            inputs = inputs.to(device)
+            outputs = model(inputs)
+            y_test_labels.extend(outputs.detach().cpu().tolist())
         if not args.test:
-            test_csv = pd.read_csv('./data/test.csv', index_col=None)
+            test_csv = pd.read_csv('../data/test.csv', index_col=None)
             test_csv['stars'] = y_test_labels
-            test_csv.to_csv('./data/test_pred_v3.csv', index=False)
+            test_csv.to_csv('./data/test_pred_v1_{}.csv'.format(args.model), index=False)
     print('\n\n\n------------------------------------------\n'
           'MIN RMSE valid {}\ttrain {} valid {}\n'
           '-----------------------------------------------\n\n'.format(min_RMSE, train_rmse, valid_rmse))

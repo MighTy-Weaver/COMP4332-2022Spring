@@ -12,8 +12,8 @@ class YelpDataset(Dataset):
         self.device = device
         self.encoder = encoder
         self.tokenizer = tokenizer
-        user_df = pd.read_csv("data/user.csv", index_col=0)
-        item_df = pd.read_csv("data/business.csv", index_col=0)
+        user_df = pd.read_csv("../data/user.csv", index_col=0)
+        item_df = pd.read_csv("../data/business.csv", index_col=0)
         user_df = user_df.rename(index=str, columns={t: 'user_' + t for t in user_df.columns if t != 'user_id'})
         item_df = item_df.rename(index=str, columns={t: 'item_' + t for t in item_df.columns if t != 'business_id'})
         self.data_merged = pd.merge(pd.merge(self.data, user_df, on='user_id'), item_df, on='business_id').reset_index(
@@ -56,8 +56,8 @@ class YelpDataset_v2(Dataset):
         self.device = device
         self.encoder = encoder
         self.tokenizer = tokenizer
-        user_df = pd.read_csv("data/user.csv", index_col=0)
-        item_df = pd.read_csv("data/business.csv", index_col=0)
+        user_df = pd.read_csv("../data/user.csv", index_col=0)
+        item_df = pd.read_csv("../data/business.csv", index_col=0)
         user_df = user_df.rename(index=str, columns={t: 'user_' + t for t in user_df.columns if t != 'user_id'})
         item_df = item_df.rename(index=str, columns={t: 'item_' + t for t in item_df.columns if t != 'business_id'})
         self.data_merged = pd.merge(pd.merge(self.data, user_df, on='user_id'), item_df, on='business_id').reset_index(
