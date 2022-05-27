@@ -26,13 +26,13 @@ def rmse(pred, actual):
 
 # Set up a argument parser
 parser = argparse.ArgumentParser()
-parser.add_argument("--gpu", type=int, default=1, required=False, help="The number of gpu you want to use")
-parser.add_argument("--epoch", type=int, default=300, required=False)
-parser.add_argument("--bs", type=int, default=2, required=False)
-parser.add_argument("--lr", type=float, default=1e-4, required=False)
+parser.add_argument("--gpu", type=int, default=0, required=False, help="The number of gpu you want to use")
+parser.add_argument("--epoch", type=int, default=100, required=False)
+parser.add_argument("--bs", type=int, default=128, required=False)
+parser.add_argument("--lr", type=float, default=5e-5, required=False)
 parser.add_argument("--test", type=int, default=0)
 parser.add_argument("--drop", type=int, default=1)
-parser.add_argument("--dim", type=int, default=15)
+parser.add_argument("--dim", type=int, default=30)
 args = parser.parse_args()
 
 # Set the GPU device
@@ -71,9 +71,9 @@ lr_scheduler = get_scheduler(name='linear', optimizer=optimizer,
                              num_warmup_steps=0, num_training_steps=epochs * len(train_loader))
 
 min_RMSE = 999999
+train_process, valid_process = [], []
 
 for e in trange(epochs, desc="Epoch: "):
-    epoch_loss = 0
 
     model.train()
     train_label, train_pred = [], []
@@ -92,8 +92,9 @@ for e in trange(epochs, desc="Epoch: "):
         train_label.extend(labels.detach().cpu().tolist())
         train_pred.extend(outputs.detach().cpu().tolist())
     train_rmse = rmse(np.array(train_pred), np.array(train_label))
-    model.eval()
+    train_process.append(train_rmse)
 
+    model.eval()
     valid_pred, valid_label = [], []
     for input1, input2, labels in tqdm(valid_loader, desc="Valid batch"):
         input1 = input1.to(device)
@@ -105,12 +106,13 @@ for e in trange(epochs, desc="Epoch: "):
         valid_pred.extend(outputs.detach().cpu().tolist())
         valid_label.extend(labels.detach().cpu().tolist())
     valid_rmse = rmse(np.array(valid_pred), np.array(valid_label))
+    valid_process.append(valid_rmse)
     if valid_rmse <= min_RMSE:
         min_RMSE = valid_rmse
         if not args.test:
             valid_csv = pd.read_csv('../data/valid.csv', index_col=None)
             valid_csv['stars_pred'] = valid_pred
-            valid_csv.to_csv('./valid_pred.csv', index=False)
+            valid_csv.to_csv('./valid_pred_{}.csv'.format(args.dim), index=False)
 
         y_test_labels = []
         for input1, input2 in tqdm(test_loader, desc="Test batch: "):
@@ -121,7 +123,8 @@ for e in trange(epochs, desc="Epoch: "):
         if not args.test:
             test_csv = pd.read_csv('../data/test.csv', index_col=None)
             test_csv['stars'] = y_test_labels
-            test_csv.to_csv('./test_pred.csv', index=False)
+            test_csv.to_csv('./test_pred_{}.csv'.format(args.dim), index=False)
+    np.save('./record_dim{}.npy'.format(args.dim), {'train': train_process, 'valid': valid_process})
     print('\n\n\n------------------------------------------\n'
           'MIN RMSE valid {}\ttrain {} valid {}\n'
-          '-----------------------------------------------\n\n'.format(min_RMSE, train_rmse, valid_rmse))
+          '------------------------------------------\n\n'.format(min_RMSE, train_rmse, valid_rmse))

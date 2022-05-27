@@ -141,3 +141,5 @@ dmypy.json
 /Project 2/report.pdf
 /Project 3/report.pdf
 /Project 1/DEVELOP_SCRIPTS/
+/Project 3/Random_Embedding/test_*
+/Project 3/Random_Embedding/valid_*
