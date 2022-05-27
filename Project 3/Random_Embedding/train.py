@@ -31,6 +31,7 @@ parser.add_argument("--epoch", type=int, default=300, required=False)
 parser.add_argument("--bs", type=int, default=2, required=False)
 parser.add_argument("--lr", type=float, default=1e-4, required=False)
 parser.add_argument("--test", type=int, default=0)
+parser.add_argument("--drop", type=int, default=1)
 args = parser.parse_args()
 
 # Set the GPU device
@@ -51,15 +52,15 @@ epochs = args.epoch
 BS = args.bs
 LR = args.lr
 
-train_dataset = YelpDataset('train', test=args.test)
-valid_dataset = YelpDataset('valid', test=args.test)
-test_dataset = YelpDataset('test', test=args.test)
+train_dataset = YelpDataset('train', test=args.test, drop_text=args.drop)
+valid_dataset = YelpDataset('valid', test=args.test, drop_text=args.drop)
+test_dataset = YelpDataset('test', test=args.test, drop_text=args.drop)
 
 model = NN_regressor(user_dict=train_dataset.get_user_dict(), business_dict=train_dataset.get_business_dict()).to(
     device)
 
 train_loader = DataLoader(train_dataset, batch_size=BS, shuffle=True)
-valid_loader = DataLoader(valid_dataset, batch_size=BS, shuffle=True)
+valid_loader = DataLoader(valid_dataset, batch_size=BS, shuffle=False)
 test_loader = DataLoader(test_dataset, batch_size=len(test_dataset), shuffle=False)
 
 criterion = nn.MSELoss()
@@ -108,7 +109,7 @@ for e in trange(epochs, desc="Epoch: "):
         if not args.test:
             valid_csv = pd.read_csv('../data/valid.csv', index_col=None)
             valid_csv['stars_pred'] = valid_pred
-            valid_csv.to_csv('./data/valid_pred_v2_{}.csv'.format(args.model), index=False)
+            valid_csv.to_csv('./valid_pred.csv', index=False)
 
         y_test_labels = []
         for input1, input2 in tqdm(test_loader, desc="Test batch: "):
@@ -119,7 +120,7 @@ for e in trange(epochs, desc="Epoch: "):
         if not args.test:
             test_csv = pd.read_csv('../data/test.csv', index_col=None)
             test_csv['stars'] = y_test_labels
-            test_csv.to_csv('./data/test_pred_v2_{}.csv'.format(args.model), index=False)
+            test_csv.to_csv('./test_pred.csv', index=False)
     print('\n\n\n------------------------------------------\n'
           'MIN RMSE valid {}\ttrain {} valid {}\n'
           '-----------------------------------------------\n\n'.format(min_RMSE, train_rmse, valid_rmse))

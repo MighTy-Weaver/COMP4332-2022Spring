@@ -3,15 +3,13 @@ from torch import nn
 
 
 class NN_regressor(nn.Module):
-    def __init__(self, user_dict, business_dict, embedding_dim=20, out_dim=1):
+    def __init__(self, user_dict, business_dict, embedding_dim=30, out_dim=1):
         super(NN_regressor, self).__init__()
         self.user_dict = user_dict
         self.business_dict = business_dict
         self.embedding_dim = embedding_dim
-        print(len(self.user_dict))
-        self.user_embedding = nn.Embedding(num_embeddings=len(self.user_dict), embedding_dim=embedding_dim)
-        print(self.user_embedding)
-        self.business_embedding = nn.Embedding(num_embeddings=len(self.business_dict), embedding_dim=embedding_dim)
+        self.user_embedding = nn.Embedding(num_embeddings=len(self.user_dict) + 1, embedding_dim=embedding_dim)
+        self.business_embedding = nn.Embedding(num_embeddings=len(self.business_dict) + 1, embedding_dim=embedding_dim)
         self.user_LSTM = nn.LSTM(input_size=embedding_dim, hidden_size=128, num_layers=2, bias=True, bidirectional=True,
                                  batch_first=True, dropout=0.2)
         self.business_LSTM = nn.LSTM(input_size=embedding_dim, hidden_size=128, num_layers=2, bias=True,
