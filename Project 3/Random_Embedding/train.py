@@ -32,6 +32,7 @@ parser.add_argument("--bs", type=int, default=2, required=False)
 parser.add_argument("--lr", type=float, default=1e-4, required=False)
 parser.add_argument("--test", type=int, default=0)
 parser.add_argument("--drop", type=int, default=1)
+parser.add_argument("--dim", type=int, default=15)
 args = parser.parse_args()
 
 # Set the GPU device
@@ -56,8 +57,8 @@ train_dataset = YelpDataset('train', test=args.test, drop_text=args.drop)
 valid_dataset = YelpDataset('valid', test=args.test, drop_text=args.drop)
 test_dataset = YelpDataset('test', test=args.test, drop_text=args.drop)
 
-model = NN_regressor(user_dict=train_dataset.get_user_dict(), business_dict=train_dataset.get_business_dict()).to(
-    device)
+model = NN_regressor(user_dict=train_dataset.get_user_dict(), business_dict=train_dataset.get_business_dict(),
+                     embedding_dim=args.dim).to(device)
 
 train_loader = DataLoader(train_dataset, batch_size=BS, shuffle=True)
 valid_loader = DataLoader(valid_dataset, batch_size=BS, shuffle=False)
