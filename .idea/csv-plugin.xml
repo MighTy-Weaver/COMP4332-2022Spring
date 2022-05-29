@@ -73,6 +73,13 @@
             </Attribute>
           </value>
         </entry>
+        <entry key="\Project 3\Random_Embedding\test_pred_20.csv">
+          <value>
+            <Attribute>
+              <option name="separator" value="," />
+            </Attribute>
+          </value>
+        </entry>
         <entry key="\Project 3\data\business.csv">
           <value>
             <Attribute>
