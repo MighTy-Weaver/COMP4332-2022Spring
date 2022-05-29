@@ -10,9 +10,9 @@ item_df = item_df.rename(index=str, columns={t: 'business_' + t for t in item_df
 data_merged = pd.merge(pd.merge(data, user_df, on='user_id'), item_df, on='business_id').reset_index(
     drop=True).drop(['user_yelping_since', 'user_elite', 'business_attributes', 'business_hours'],
                     axis=1).reset_index(drop=True)
-data_merged = data_merged.drop(
-    ['user_id', 'business_id', 'user_name', 'business_name', 'business_address', 'business_city',
-     'business_state', 'business_postal_code', 'business_categories'], axis=1)
+# data_merged = data_merged.drop(
+#     ['user_id', 'business_id', 'user_name', 'business_name', 'business_address', 'business_city',
+#      'business_state', 'business_postal_code', 'business_categories'], axis=1)
 print(data_merged.dtypes)
 # calculate the correlation matrix
 corr = data_merged.corr()
